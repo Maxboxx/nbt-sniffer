@@ -628,8 +628,11 @@ fn process_block_entity(
     let x = block_entity.int("x").unwrap();
     let y = block_entity.int("y").unwrap();
     let z = block_entity.int("z").unwrap();
-
+    
     let mut summary_nodes = Vec::new();
+    
+    collect_summary_node(&block_entity, cli_args, item_queries, &mut summary_nodes, counter);
+    
     if let Some(items) = block_entity
         .list(nbt_utils::NBT_KEY_ITEMS)
         .and_then(|l| l.compounds())
@@ -718,10 +721,11 @@ fn collect_summary_node(
     }
 
     if matches_filter {
-        let nbt_components = item_nbt
-            .compound(nbt_utils::NBT_KEY_COMPONENTS)
-            .as_ref()
-            .map(convert_simdnbt_to_valence_nbt);
+        let nbt_components = if item_nbt.contains("x") {
+            Some(convert_simdnbt_to_valence_nbt(item_nbt))
+        } else {
+            item_nbt.compound(nbt_utils::NBT_KEY_COMPONENTS).as_ref().map(convert_simdnbt_to_valence_nbt)
+        };
 
         global_counter.add(id.clone(), nbt_components.as_ref(), count);
 
@@ -773,6 +777,8 @@ pub fn nbt_is_subset(superset: &Value, subset: &Value) -> bool {
                 }
             })
         }
+
+        (Value::String(super_string), Value::String(sub_string)) => super_string.contains(sub_string),
 
         _ => superset == subset,
     }
